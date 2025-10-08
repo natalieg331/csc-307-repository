@@ -86,8 +86,15 @@ const addUser = (user) => {
 
 app.post("/users", (req, res) => {
   const userToAdd = req.body;
-  addUser(userToAdd);
-  res.send();
+  const newUser = {
+    //i did look up how to Math.random() and decided to also use
+    // .toString(36).substr(2,6) converts id into mix of letters and nums
+    //and trims it to a short random id 
+    id: Math.random().toString(36).substr(2,6),
+    ...userToAdd,
+  };
+  addUser(newUser);
+  res.status(201).json(newUser); //returns 201 Craeted with new user
 });
 
 // DELETE /users/:id

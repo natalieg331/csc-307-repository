@@ -19,22 +19,45 @@ function MyApp() {
 }, [] );
 
   function postUser(person) {
-    const promise = fetch("Http://localhost:8000/users", {
+    const promise = fetch("http://localhost:8000/users", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(person),
-    });
+    })
+      .then((res) => {
+      if (res.status === 201){
+          return res.json(); //returns new user with id
+        } else {
+          throw new Error("Failed to create user");
+        }
+});
 
     return promise;
   }
 
   function removeOneCharacter(index) {
-    const updated = characters.filter((character, i) => {
-      return i !== index;
-    });
-    setCharacters(updated);
+    const user = characters[index];
+
+  const promise = fetch(`http://localhost:8000/users/${user.id}`, {
+    method: "DELETE",
+  })
+    .then((res) => {
+      if (res.status === 204) {
+        // only update frontend state if backend delete was successful
+        const updated = characters.filter((character) => character.id !== user.id);
+        setCharacters(updated);
+      } else if (res.status === 404) {
+        console.log("User not found on backend.");
+      } else {
+        throw new Error("Failed to delete user.");
+      }
+    })
+    .catch((error) => console.log(error));
+
+  return promise;
+
   }
  function updateList(person) { 
     postUser(person)
