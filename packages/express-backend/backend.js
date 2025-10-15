@@ -1,40 +1,7 @@
 // backend.js
 import cors from "cors";
 import express from "express";
-const users = {
-  users_list: [
-    {
-      id: "xyz789",
-      name: "Charlie",
-      job: "Janitor"
-    },
-    {
-      id: "fff333",
-      name: "Bob",
-      job: "Builder"
-    },
-    {
-      id: "abc123",
-      name: "Mac",
-      job: "Bouncer"
-    },
-    {
-      id: "ppp222",
-      name: "Mac",
-      job: "Professor"
-    },
-    {
-      id: "yat999",
-      name: "Dee",
-      job: "Aspring actress"
-    },
-    {
-      id: "zap555",
-      name: "Dennis",
-      job: "Bartender"
-    }
-  ]
-};
+import userService from "./models/user-services.js";
 
 const app = express();
 const port = 8000;
@@ -47,94 +14,74 @@ app.get("/", (req, res) => {
 });
 
 //GET  /user
-const findUserByName = (name) => {
-  return users["users_list"].filter(
-    (user) => user["name"] === name
-  );
-};
 
 app.get("/users", (req, res) => {
-  const name = req.query.name;
-  if (name != undefined) {
-    let result = findUserByName(name);
-    result = { users_list: result };
-    res.send(result);
+  const { name, job } = req.query;
+
+  let promise;
+  if (name && job) {
+    // use the specific function for name AND job
+    promise = userService.findUserByNameAndJob(name, job);
   } else {
-    res.send(users);
+    // getUsers already dispatches to the proper findUserByName / findUserByJob / findAll
+    promise = userService.getUsers(name, job);
   }
+
+  promise
+    .then((users) => {
+      // Ensure consistent response shape used by the frontend
+      res.json({ users_list: users });
+    })
+    .catch((error) => {
+      res.status(500).send("Internal server error");
+    });
 });
 
 //GET /users/:id
-const findUserById = (id) =>
-  users["users_list"].find((user) => user["id"] === id);
-
 app.get("/users/:id", (req, res) => {
-  const id = req.params["id"]; //or req.params.id
-  let result = findUserById(id);
-  if (result === undefined) {
-    res.status(404).send("Resource not found.");
-  } else {
-    res.send(result);
-  }
+  const id = req.params.id;
+  userService
+    .findUserById(id)
+    .then((user) => {
+      if (!user) {
+        return res.status(404).send("Resource not found.");
+      }
+      res.json(user);
+    })
+    .catch((error) => {
+      res.status(500).send("Internal server error");
+    });
 });
 
 //POST /users
-const addUser = (user) => {
-  users["users_list"].push(user);
-  return user;
-};
-
 app.post("/users", (req, res) => {
   const userToAdd = req.body;
-  const newUser = {
-    //i did look up how to Math.random() and decided to also use
-    // .toString(36).substr(2,6) converts id into mix of letters and nums
-    //and trims it to a short random id 
-    id: Math.random().toString(36).substr(2,6),
-    ...userToAdd,
-  };
-  addUser(newUser);
-  res.status(201).json(newUser); //returns 201 Craeted with new user
+  userService
+    .addUser(userToAdd)
+    .then((newUser) => res.status(201).json(newUser))
+    .catch((error) => {
+      res.status(500).send("Internal server error");
+    });
 });
 
 // DELETE /users/:id
 //since we already have findUserByID, we just need to delete it
 app.delete("/users/:id", (req, res) => {
-  const id = req.params["id"];
-  const result = findUserById(id);
-  if (!result) {
-    //user not found
-    res.status(404).send("User not found.");
-  } else {
-    //removes user from list, and return new list without that user
-    //i used filter since it returns a new list 
-    users.users_list = users.users_list.filter((user) => user["id"] != id)
-    res.status(200).send("User deleted successfully.");
+  const id = req.params.id;
+  userService
+    .deleteUserById(id)
+    .then((deleted) => {
+      if (!deleted) {
+        return res.status(404).send("User not found.");
+      }
+      // Successful deletion
+      res.status(204).send();
+    })
+    .catch((error) => {
+      res.status(500).send("Internal server error");
+    });
+});
 
-  }
-
-})
-
-//Match users if they have same name and job
-const findUserByNameAndJob = (name, job) => {
-  //i used filter() because it will return the new list of matching name and job
-  return users.users_list.filter(
-    (user) => user["name"] === name && user["job"] === job);
-};
-
-app.get("/users", (req,res) => {
-  const name = req.query["name"];
-  const job = req.query["job"];
-  if (name && job) {
-    const result = findUserByNameAndJob(name,job);
-    res.send({users_list: result});
-  } else if(name) {
-    const result = users.users_list.filter((user) => user["name"] === name);
-    res.send({users_list: result });
-  } else{
-    res.send(users);
-  }
-})
 app.listen(port, () => {
   console.log(
     `Example app listening at http://localhost:${port}`

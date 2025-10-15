@@ -37,31 +37,27 @@ function MyApp() {
     return promise;
   }
 
-  function removeOneCharacter(index) {
-    const user = characters[index];
+  function removeOneCharacter(id) {
+    const user = characters.find((character) => character._id === id);
 
-  const promise = fetch(`http://localhost:8000/users/${user.id}`, {
-    method: "DELETE",
-  })
-    .then((res) => {
-      if (res.status === 204) {
-        // only update frontend state if backend delete was successful
-        const updated = characters.filter((character) => character.id !== user.id);
-        setCharacters(updated);
-      } else if (res.status === 404) {
-        console.log("User not found on backend.");
-      } else {
-        throw new Error("Failed to delete user.");
-      }
+    return fetch(`http://localhost:8000/users/${id}`, {
+      method: "DELETE",
     })
-    .catch((error) => console.log(error));
-
-  return promise;
-
+      .then((res) => {
+        if (res.status === 204) {
+          const updated = characters.filter((character) => character._id !== id);
+          setCharacters(updated);
+        } else if (res.status === 404) {
+          console.log("User not found on backend.");
+        } else {
+          throw new Error("Failed to delete user.");
+        }
+      })
+      .catch((error) => console.log(error));
   }
  function updateList(person) { 
     postUser(person)
-      .then(() => setCharacters([...characters, person]))
+      .then((newUser) => setCharacters([...characters, newUser]))
       .catch((error) => {
         console.log(error);
       })
